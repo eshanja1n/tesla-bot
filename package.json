@@ -12,7 +12,8 @@
     "test": "node --test",
     "generate-keys": "node scripts/generate-keys.js",
     "validate-keys": "node scripts/generate-keys.js validate",
-    "show-public-key": "node scripts/generate-keys.js display"
+    "show-public-key": "node scripts/generate-keys.js display",
+    "test-deployment": "node test/deployment-test.js"
   },
   "dependencies": {
     "express": "^4.18.2",

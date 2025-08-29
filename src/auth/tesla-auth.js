@@ -60,8 +60,9 @@ export class TeslaAuth {
 
   async exchangeCodeForTokens(authCode, codeVerifier) {
     try {
-      // Use Fleet API token endpoint for enhanced security
-      const tokenUrl = `${this.fleetAuthUrl}/oauth2/v3/token`;
+      // Use standard Tesla auth endpoint for authorization code flow
+      // Fleet API endpoint may have different requirements
+      const tokenUrl = `${this.authBaseUrl}/oauth2/v3/token`;
       
       const tokenData = {
         grant_type: 'authorization_code',
@@ -71,14 +72,21 @@ export class TeslaAuth {
         code_verifier: codeVerifier
       };
 
-      // If we have a private key, use it for client assertion (more secure)
+      // Always include client_secret as it's required by Tesla Fleet API
+      tokenData.client_secret = this.clientSecret;
+      
+      // Additionally use private key for client assertion if available (enhanced security)
       if (this.privateKey) {
-        const clientAssertion = this.createClientAssertion();
-        tokenData.client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
-        tokenData.client_assertion = clientAssertion;
+        try {
+          const clientAssertion = this.createClientAssertion();
+          tokenData.client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
+          tokenData.client_assertion = clientAssertion;
+          console.log('Using private key client assertion for enhanced security');
+        } catch (error) {
+          console.warn('Failed to create client assertion, using client_secret only:', error.message);
+        }
       } else {
-        // Fallback to client secret
-        tokenData.client_secret = this.clientSecret;
+        console.log('No private key found, using client_secret authentication');
       }
 
       const response = await axios.post(tokenUrl, new URLSearchParams(tokenData), {
@@ -130,7 +138,7 @@ export class TeslaAuth {
 
   async refreshAccessToken(refreshToken) {
     try {
-      const tokenUrl = `${this.fleetAuthUrl}/oauth2/v3/token`;
+      const tokenUrl = `${this.authBaseUrl}/oauth2/v3/token`;
       
       const refreshData = {
         grant_type: 'refresh_token',
@@ -138,13 +146,18 @@ export class TeslaAuth {
         refresh_token: refreshToken
       };
 
-      // Use client assertion if private key is available
+      // Always include client_secret
+      refreshData.client_secret = this.clientSecret;
+      
+      // Additionally use client assertion if private key is available
       if (this.privateKey) {
-        const clientAssertion = this.createClientAssertion();
-        refreshData.client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
-        refreshData.client_assertion = clientAssertion;
-      } else {
-        refreshData.client_secret = this.clientSecret;
+        try {
+          const clientAssertion = this.createClientAssertion();
+          refreshData.client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
+          refreshData.client_assertion = clientAssertion;
+        } catch (error) {
+          console.warn('Failed to create client assertion for refresh, using client_secret only:', error.message);
+        }
       }
 
       const response = await axios.post(tokenUrl, new URLSearchParams(refreshData), {

@@ -30,7 +30,15 @@ router.get('/login', (req, res) => {
 
 router.get('/callback', async (req, res) => {
   try {
-    const { code, state } = req.query;
+    const { code, state, error: authError, error_description } = req.query;
+    
+    // Handle OAuth errors from Tesla
+    if (authError) {
+      return res.status(400).json({ 
+        error: `OAuth error: ${authError}`, 
+        description: error_description 
+      });
+    }
     
     if (!code || !state) {
       return res.status(400).json({ error: 'Missing authorization code or state parameter' });
@@ -43,6 +51,7 @@ router.get('/callback', async (req, res) => {
 
     authSessions.delete(state);
 
+    console.log('Exchanging authorization code for tokens...');
     const tokens = await teslaAuth.exchangeCodeForTokens(code, session.codeVerifier);
     
     res.json({
@@ -56,7 +65,16 @@ router.get('/callback', async (req, res) => {
       next_steps: 'Store these tokens securely and use the access_token for API requests'
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Token exchange error:', error.message);
+    res.status(500).json({ 
+      error: error.message,
+      debug_info: process.env.NODE_ENV === 'development' ? {
+        client_id_set: !!process.env.TESLA_CLIENT_ID,
+        client_secret_set: !!process.env.TESLA_CLIENT_SECRET,
+        private_key_set: !!process.env.TESLA_PRIVATE_KEY,
+        redirect_uri: process.env.TESLA_REDIRECT_URI
+      } : undefined
+    });
   }
 });
 
