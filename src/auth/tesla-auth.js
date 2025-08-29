@@ -32,7 +32,7 @@ export class TeslaAuth {
     return null;
   }
 
-  generateAuthUrl(scopes = ['openid', 'offline_access', 'vehicle_device_data', 'vehicle_cmds', 'energy_cmds']) {
+  generateAuthUrl(scopes = ['openid', 'offline_access', 'vehicle_device_data', 'vehicle_cmds', 'energy_cmds', "user_data", "vehicle_charging_cmds", "energy_device_data", "vehicle_location"]) {
     const state = crypto.randomBytes(32).toString('hex');
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
     const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');

@@ -21,22 +21,148 @@ router.get('/debug-token', (req, res) => {
 router.get('/test-api', async (req, res) => {
   try {
     const vehicleAPI = new TeslaFleetAPI();
-    // Set minimal token data to avoid refresh issues
-    vehicleAPI.setTokens({ 
-      access_token: req.tokens.access_token,
-      expires_at: Date.now() + 3600000 // Set expiry 1 hour from now to avoid refresh
-    });
+    const energyAPI = new TeslaEnergyAPI();
     
-    console.log('Testing basic API connection...');
-    const vehicles = await vehicleAPI.getVehicles();
-    res.json({
-      success: true,
-      message: 'API connection working',
-      vehicle_count: vehicles.response?.length || 0,
-      vehicles: vehicles
-    });
+    const tokenData = { 
+      access_token: req.tokens.access_token,
+      expires_at: Date.now() + 3600000 
+    };
+    
+    vehicleAPI.setTokens(tokenData);
+    energyAPI.setTokens(tokenData);
+    
+    console.log('=== COMPREHENSIVE TESLA FLEET API DEBUG ===');
+    
+    const results = {
+      timestamp: new Date().toISOString(),
+      token_info: {
+        length: req.tokens.access_token?.length,
+        preview: req.tokens.access_token?.substring(0, 30) + '...'
+      },
+      tests: {},
+      troubleshooting: []
+    };
+    
+    // Test 1: Raw /api/1/vehicles endpoint
+    try {
+      console.log('Testing /api/1/vehicles...');
+      const response = await vehicleAPI.httpClient.get('/api/1/vehicles');
+      results.tests.vehicles_raw = {
+        success: true,
+        status: response.status,
+        headers: response.headers,
+        data: response.data,
+        has_response_array: !!response.data?.response,
+        response_count: response.data?.response?.length || 0
+      };
+      
+      if (response.data?.response?.length === 0) {
+        results.troubleshooting.push("No vehicles returned - this is the main issue");
+      }
+    } catch (error) {
+      results.tests.vehicles_raw = {
+        success: false,
+        status: error.response?.status,
+        error: error.message,
+        response_data: error.response?.data
+      };
+    }
+    
+    // Test 2: Raw /api/1/products endpoint
+    try {
+      console.log('Testing /api/1/products...');
+      const response = await vehicleAPI.httpClient.get('/api/1/products');
+      results.tests.products_raw = {
+        success: true,
+        status: response.status,
+        data: response.data,
+        total_products: response.data?.response?.length || 0,
+        product_types: response.data?.response?.map(p => p.resource_type) || []
+      };
+      
+      const vehicles = response.data?.response?.filter(p => p.resource_type === 'vehicle') || [];
+      const batteries = response.data?.response?.filter(p => p.resource_type === 'battery') || [];
+      const solar = response.data?.response?.filter(p => p.resource_type === 'solar') || [];
+      
+      results.tests.products_breakdown = {
+        vehicles: vehicles.length,
+        batteries: batteries.length,  
+        solar: solar.length,
+        vehicle_details: vehicles,
+        battery_details: batteries,
+        solar_details: solar
+      };
+      
+      if (vehicles.length === 0) {
+        results.troubleshooting.push("No vehicle products found in /api/1/products");
+      }
+      
+    } catch (error) {
+      results.tests.products_raw = {
+        success: false,
+        status: error.response?.status,
+        error: error.message,
+        response_data: error.response?.data
+      };
+    }
+    
+    // Test 3: Try different API regions
+    const regions = [
+      { name: 'North America', url: 'https://fleet-api.prd.na.vn.cloud.tesla.com' },
+      { name: 'Europe', url: 'https://fleet-api.prd.eu.vn.cloud.tesla.com' },
+      { name: 'China', url: 'https://fleet-api.prd.cn.vn.cloud.tesla.com' }
+    ];
+    
+    results.tests.regional_tests = {};
+    
+    for (const region of regions) {
+      try {
+        console.log(`Testing ${region.name} region...`);
+        const regionResponse = await vehicleAPI.httpClient.client({
+          method: 'get',
+          url: '/api/1/vehicles',
+          baseURL: region.url,
+          headers: {
+            'Authorization': `Bearer ${req.tokens.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        });
+        
+        results.tests.regional_tests[region.name] = {
+          success: true,
+          vehicle_count: regionResponse.data?.response?.length || 0,
+          url: region.url
+        };
+        
+        if (regionResponse.data?.response?.length > 0) {
+          results.troubleshooting.push(`FOUND VEHICLES in ${region.name} region!`);
+        }
+        
+      } catch (error) {
+        results.tests.regional_tests[region.name] = {
+          success: false,
+          error: error.response?.status || error.message,
+          url: region.url
+        };
+      }
+    }
+    
+    // Add troubleshooting recommendations
+    if (results.troubleshooting.length === 0) {
+      results.troubleshooting = [
+        "Fleet API authentication successful but no vehicles found",
+        "This usually means vehicles need to be enrolled in Fleet API",
+        "Try: 1) Re-authenticate with all scopes, 2) Contact Tesla Fleet API support",
+        "Check if vehicle is in a different region",
+        "Ensure vehicle was used in Tesla mobile app recently"
+      ];
+    }
+    
+    res.json(results);
+    
   } catch (error) {
-    console.error('Test API error:', error.message);
+    console.error('Comprehensive test error:', error);
     res.status(500).json({ 
       error: error.message,
       success: false 

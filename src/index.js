@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { authRouter } from './routes/auth.js';
 import { apiRouter } from './routes/api.js';
+import { debugRouter } from './routes/debug.js';
 import { wellKnownRouter } from './routes/well-known.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -29,6 +30,7 @@ app.get('/', (req, res) => {
 
 app.use('/auth', authRouter);
 app.use('/api', apiRouter);
+app.use('/debug', debugRouter);
 app.use('/.well-known', wellKnownRouter);
 
 app.use(errorHandler);

@@ -33,9 +33,24 @@ export class TeslaFleetAPI {
     await this.ensureValidToken();
     
     try {
+      console.log('Making request to /api/1/vehicles...');
       const response = await this.httpClient.get('/api/1/vehicles');
+      console.log('Vehicles response status:', response.status);
+      console.log('Vehicles response data:', JSON.stringify(response.data, null, 2));
+      
+      if (!response.data) {
+        console.log('No response data received');
+        return { response: [], count: 0 };
+      }
+      
       return response.data;
     } catch (error) {
+      console.error('Vehicles API error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
       throw new Error(`Failed to fetch vehicles: ${error.response?.data?.error || error.message}`);
     }
   }
