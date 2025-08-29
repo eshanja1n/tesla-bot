@@ -1,0 +1,32 @@
+{
+  "name": "tesla-fleet-api-bot",
+  "version": "1.0.0",
+  "description": "Tesla Fleet API integration for vehicle and Powerwall management",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "build": "echo 'No build step required'",
+    "lint": "eslint src/",
+    "test": "node --test",
+    "generate-keys": "node scripts/generate-keys.js",
+    "validate-keys": "node scripts/generate-keys.js validate",
+    "show-public-key": "node scripts/generate-keys.js display"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "eslint": "^8.55.0",
+    "@vercel/node": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
