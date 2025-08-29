@@ -12,8 +12,9 @@ router.get('/appspecific/com.tesla.3p.public-key.pem', (req, res) => {
     
     if (publicKeyFromEnv) {
       res.set({
-        'Content-Type': 'application/x-pem-file',
-        'Cache-Control': 'public, max-age=3600'
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+        'Content-Disposition': 'inline'
       });
       return res.send(publicKeyFromEnv);
     }
@@ -24,8 +25,9 @@ router.get('/appspecific/com.tesla.3p.public-key.pem', (req, res) => {
     if (fs.existsSync(publicKeyPath)) {
       const publicKey = fs.readFileSync(publicKeyPath, 'utf8');
       res.set({
-        'Content-Type': 'application/x-pem-file',
-        'Cache-Control': 'public, max-age=3600'
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+        'Content-Disposition': 'inline'
       });
       return res.send(publicKey);
     }
