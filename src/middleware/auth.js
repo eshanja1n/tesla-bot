@@ -13,8 +13,12 @@ export const authMiddleware = (req, res, next) => {
     return res.status(401).json({ error: 'Access token is required' });
   }
 
+  // Add some debugging info
+  console.log('Token received, length:', accessToken.length);
+  console.log('Token starts with:', accessToken.substring(0, 20) + '...');
+
   req.tokens = {
-    access_token: accessToken
+    access_token: accessToken.trim() // Ensure no whitespace
   };
 
   next();

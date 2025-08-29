@@ -1,8 +1,10 @@
 import { TeslaHttpClient } from '../lib/http-client.js';
+import { TeslaAuth } from '../auth/tesla-auth.js';
 
 export class TeslaEnergyAPI {
   constructor() {
     this.httpClient = new TeslaHttpClient();
+    this.teslaAuth = new TeslaAuth();
     this.tokens = null;
   }
 
@@ -28,12 +30,21 @@ export class TeslaEnergyAPI {
     await this.ensureValidToken();
     
     try {
+      console.log('Making request to /api/1/products...');
       const response = await this.httpClient.get('/api/1/products');
+      console.log('Products response status:', response.status);
+      
+      if (!response.data || !response.data.response) {
+        console.log('Unexpected response structure:', response.data);
+        return [];
+      }
+      
       return response.data.response.filter(product => 
         product.resource_type === 'battery' || 
         product.resource_type === 'solar'
       );
     } catch (error) {
+      console.error('Energy products error:', error.response?.status, error.response?.data);
       throw new Error(`Failed to fetch energy products: ${error.response?.data?.error || error.message}`);
     }
   }

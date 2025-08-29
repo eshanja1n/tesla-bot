@@ -8,6 +8,15 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+router.get('/debug-token', (req, res) => {
+  res.json({
+    token_received: !!req.tokens?.access_token,
+    token_length: req.tokens?.access_token?.length || 0,
+    token_preview: req.tokens?.access_token?.substring(0, 20) + '...',
+    message: 'Token debugging info'
+  });
+});
+
 router.get('/status', async (req, res) => {
   try {
     const coordinator = new ChargingCoordinator();
