@@ -18,7 +18,10 @@ export class TeslaFleetAPI {
       throw new Error('No authentication tokens available. Please authenticate first.');
     }
 
-    if (this.teslaAuth.isTokenExpired(this.tokens)) {
+    // Skip automatic refresh if we don't have a refresh token
+    // This means the token was passed directly via API calls
+    if (this.tokens.refresh_token && this.teslaAuth.isTokenExpired(this.tokens)) {
+      console.log('Refreshing expired token...');
       this.tokens = await this.teslaAuth.refreshAccessToken(this.tokens.refresh_token);
       this.httpClient.setAuthToken(this.tokens.access_token);
     }

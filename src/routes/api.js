@@ -13,8 +13,35 @@ router.get('/debug-token', (req, res) => {
     token_received: !!req.tokens?.access_token,
     token_length: req.tokens?.access_token?.length || 0,
     token_preview: req.tokens?.access_token?.substring(0, 20) + '...',
+    has_refresh_token: !!req.tokens?.refresh_token,
     message: 'Token debugging info'
   });
+});
+
+router.get('/test-api', async (req, res) => {
+  try {
+    const vehicleAPI = new TeslaFleetAPI();
+    // Set minimal token data to avoid refresh issues
+    vehicleAPI.setTokens({ 
+      access_token: req.tokens.access_token,
+      expires_at: Date.now() + 3600000 // Set expiry 1 hour from now to avoid refresh
+    });
+    
+    console.log('Testing basic API connection...');
+    const vehicles = await vehicleAPI.getVehicles();
+    res.json({
+      success: true,
+      message: 'API connection working',
+      vehicle_count: vehicles.response?.length || 0,
+      vehicles: vehicles
+    });
+  } catch (error) {
+    console.error('Test API error:', error.message);
+    res.status(500).json({ 
+      error: error.message,
+      success: false 
+    });
+  }
 });
 
 router.get('/status', async (req, res) => {
@@ -34,9 +61,11 @@ router.get('/vehicles', async (req, res) => {
     const vehicleAPI = new TeslaFleetAPI();
     vehicleAPI.setTokens(req.tokens);
     
+    console.log('Fetching vehicles with token length:', req.tokens.access_token?.length);
     const vehicles = await vehicleAPI.getVehicles();
     res.json(vehicles);
   } catch (error) {
+    console.error('Vehicles endpoint error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
