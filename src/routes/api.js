@@ -18,6 +18,28 @@ router.get('/debug-token', (req, res) => {
   });
 });
 
+router.get('/debug-tvcp', (req, res) => {
+  try {
+    const vehicleAPI = new TeslaFleetAPI();
+    const hasPrivateKey = !!vehicleAPI.teslaAuth.privateKey;
+    const domain = vehicleAPI.domain;
+    
+    res.json({
+      tvcp_ready: hasPrivateKey && domain,
+      has_private_key: hasPrivateKey,
+      domain: domain,
+      private_key_preview: hasPrivateKey ? 'Present' : 'Missing',
+      public_key_url: `${domain}/.well-known/appspecific/com.tesla.3p.public-key.pem`,
+      message: hasPrivateKey ? 'TVCP should work' : 'Private key missing - TVCP will fail'
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      tvcp_ready: false
+    });
+  }
+});
+
 router.get('/test-api', async (req, res) => {
   try {
     const vehicleAPI = new TeslaFleetAPI();

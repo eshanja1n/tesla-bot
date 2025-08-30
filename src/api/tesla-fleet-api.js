@@ -1,11 +1,14 @@
 import { TeslaHttpClient } from '../lib/http-client.js';
 import { TeslaAuth } from '../auth/tesla-auth.js';
+import { TVCPClient } from '../lib/tvcp-client.js';
 
 export class TeslaFleetAPI {
   constructor() {
     this.httpClient = new TeslaHttpClient();
     this.teslaAuth = new TeslaAuth();
     this.tokens = null;
+    this.domain = process.env.TESLA_REDIRECT_URI?.replace('/auth/callback', '') || 'https://tesla-bot.vercel.app';
+    this.tvcp = new TVCPClient(this.teslaAuth.privateKey, this.domain);
   }
 
   setTokens(tokens) {
@@ -94,9 +97,10 @@ export class TeslaFleetAPI {
     }
 
     try {
-      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/set_charging_amps`, {
+      const commandData = this.tvcp.createTVCPRequest('set_charging_amps', vehicleId, {
         charging_amps: chargingAmps
       });
+      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/set_charging_amps`, commandData);
       return response.data;
     } catch (error) {
       throw new Error(`Failed to set charging amps: ${error.response?.data?.error || error.message}`);
@@ -111,9 +115,10 @@ export class TeslaFleetAPI {
     }
 
     try {
-      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/set_charge_limit`, {
+      const commandData = this.tvcp.createTVCPRequest('set_charge_limit', vehicleId, {
         percent: percent
       });
+      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/set_charge_limit`, commandData);
       return response.data;
     } catch (error) {
       throw new Error(`Failed to set charge limit: ${error.response?.data?.error || error.message}`);
@@ -124,7 +129,9 @@ export class TeslaFleetAPI {
     await this.ensureValidToken();
     
     try {
-      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/charge_start`);
+      // Use TVCP for vehicle commands
+      const commandData = this.tvcp.createTVCPRequest('charging_start', vehicleId);
+      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/charging_start`, commandData);
       return response.data;
     } catch (error) {
       throw new Error(`Failed to start charging: ${error.response?.data?.error || error.message}`);
@@ -135,7 +142,9 @@ export class TeslaFleetAPI {
     await this.ensureValidToken();
     
     try {
-      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/charge_stop`);
+      // Use TVCP for vehicle commands
+      const commandData = this.tvcp.createTVCPRequest('charging_stop', vehicleId);
+      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/charging_stop`, commandData);
       return response.data;
     } catch (error) {
       throw new Error(`Failed to stop charging: ${error.response?.data?.error || error.message}`);
@@ -173,6 +182,7 @@ export class TeslaFleetAPI {
     await this.ensureValidToken();
     
     try {
+      // Wake up is still a simple POST, not requiring TVCP
       const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/wake_up`);
       return response.data;
     } catch (error) {
