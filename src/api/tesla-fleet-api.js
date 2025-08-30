@@ -1,19 +1,19 @@
 import { TeslaHttpClient } from '../lib/http-client.js';
 import { TeslaAuth } from '../auth/tesla-auth.js';
-import { TVCPClient } from '../lib/tvcp-client.js';
+import { TeslaCommandProxy } from '../lib/tesla-command-proxy.js';
 
 export class TeslaFleetAPI {
   constructor() {
     this.httpClient = new TeslaHttpClient();
     this.teslaAuth = new TeslaAuth();
+    this.commandProxy = new TeslaCommandProxy();
     this.tokens = null;
-    this.domain = process.env.TESLA_REDIRECT_URI?.replace('/auth/callback', '') || 'https://tesla-bot.vercel.app';
-    this.tvcp = new TVCPClient(this.teslaAuth.privateKey, this.domain);
   }
 
   setTokens(tokens) {
     this.tokens = tokens;
     this.httpClient.setAuthToken(tokens.access_token);
+    this.commandProxy.setTokens(tokens);
   }
 
   async ensureValidToken() {
@@ -91,64 +91,22 @@ export class TeslaFleetAPI {
 
   async setChargingAmps(vehicleId, chargingAmps) {
     await this.ensureValidToken();
-    
-    if (chargingAmps < 5 || chargingAmps > 48) {
-      throw new Error('Charging amps must be between 5 and 48');
-    }
-
-    try {
-      const commandData = this.tvcp.createTVCPRequest('set_charging_amps', vehicleId, {
-        charging_amps: chargingAmps
-      });
-      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/set_charging_amps`, commandData);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to set charging amps: ${error.response?.data?.error || error.message}`);
-    }
+    return this.commandProxy.setChargingAmps(vehicleId, chargingAmps);
   }
 
   async setChargeLimit(vehicleId, percent) {
     await this.ensureValidToken();
-    
-    if (percent < 50 || percent > 100) {
-      throw new Error('Charge limit must be between 50% and 100%');
-    }
-
-    try {
-      const commandData = this.tvcp.createTVCPRequest('set_charge_limit', vehicleId, {
-        percent: percent
-      });
-      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/set_charge_limit`, commandData);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to set charge limit: ${error.response?.data?.error || error.message}`);
-    }
+    return this.commandProxy.setChargeLimit(vehicleId, percent);
   }
 
   async startCharging(vehicleId) {
     await this.ensureValidToken();
-    
-    try {
-      // Use TVCP for vehicle commands
-      const commandData = this.tvcp.createTVCPRequest('charging_start', vehicleId);
-      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/charging_start`, commandData);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to start charging: ${error.response?.data?.error || error.message}`);
-    }
+    return this.commandProxy.startCharging(vehicleId);
   }
 
   async stopCharging(vehicleId) {
     await this.ensureValidToken();
-    
-    try {
-      // Use TVCP for vehicle commands
-      const commandData = this.tvcp.createTVCPRequest('charging_stop', vehicleId);
-      const response = await this.httpClient.post(`/api/1/vehicles/${vehicleId}/command/charging_stop`, commandData);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to stop charging: ${error.response?.data?.error || error.message}`);
-    }
+    return this.commandProxy.stopCharging(vehicleId);
   }
 
   async scheduleCharging(vehicleId, time) {

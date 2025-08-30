@@ -23,21 +23,31 @@ router.get('/debug-tvcp', (req, res) => {
   try {
     const vehicleAPI = new TeslaFleetAPI();
     const hasPrivateKey = !!vehicleAPI.teslaAuth.privateKey;
-    const domain = vehicleAPI.domain;
     
     res.json({
-      tvcp_ready: hasPrivateKey && domain,
+      using_command_proxy: true,
+      proxy_endpoint: vehicleAPI.commandProxy.proxyBaseUrl,
       has_private_key: hasPrivateKey,
-      domain: domain,
-      private_key_preview: hasPrivateKey ? 'Present' : 'Missing',
-      public_key_url: `${domain}/.well-known/appspecific/com.tesla.3p.public-key.pem`,
-      message: hasPrivateKey ? 'TVCP should work' : 'Private key missing - TVCP will fail'
+      message: 'Using Tesla Command Proxy for vehicle commands (recommended)',
+      note: 'Virtual keys must be installed on vehicle for commands to work'
     });
   } catch (error) {
     res.status(500).json({
       error: error.message,
       tvcp_ready: false
     });
+  }
+});
+
+router.get('/vehicles/:id/tvcp-status', async (req, res) => {
+  try {
+    const vehicleAPI = new TeslaFleetAPI();
+    vehicleAPI.setTokens(req.tokens);
+    
+    const status = await vehicleAPI.commandProxy.checkTVCPSupport(req.params.id);
+    res.json({ vehicle_id: req.params.id, ...status });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
