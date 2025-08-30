@@ -35,12 +35,14 @@ router.get('/token-scopes', (req, res) => {
       },
       scopes: {
         raw_scope: payload.scope,
-        parsed_scopes: payload.scope ? payload.scope.split(' ') : [],
-        has_vehicle_data: payload.scope?.includes('vehicle_device_data'),
-        has_vehicle_cmds: payload.scope?.includes('vehicle_cmds'),
-        has_energy_cmds: payload.scope?.includes('energy_cmds'),
-        has_offline_access: payload.scope?.includes('offline_access'),
-        has_openid: payload.scope?.includes('openid')
+        scp_claim: payload.scp, // Tesla might use 'scp' instead of 'scope'
+        all_claims: Object.keys(payload),
+        parsed_scopes: payload.scope ? payload.scope.split(' ') : (payload.scp ? payload.scp.split(' ') : []),
+        has_vehicle_data: (payload.scope?.includes('vehicle_device_data') || payload.scp?.includes('vehicle_device_data')),
+        has_vehicle_cmds: (payload.scope?.includes('vehicle_cmds') || payload.scp?.includes('vehicle_cmds')),
+        has_energy_cmds: (payload.scope?.includes('energy_cmds') || payload.scp?.includes('energy_cmds')),
+        has_offline_access: (payload.scope?.includes('offline_access') || payload.scp?.includes('offline_access')),
+        has_openid: (payload.scope?.includes('openid') || payload.scp?.includes('openid'))
       },
       recommendations: []
     };

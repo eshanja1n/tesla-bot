@@ -1,6 +1,7 @@
 import express from 'express';
 import { TeslaFleetAPI } from '../api/tesla-fleet-api.js';
 import { TeslaEnergyAPI } from '../api/energy-api.js';
+import { VirtualKeyAPI } from '../api/virtual-key-api.js';
 import { ChargingCoordinator } from '../services/charging-coordinator.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -391,6 +392,69 @@ router.post('/charging/auto/stop', async (req, res) => {
     coordinator.setTokens(req.tokens);
     
     const result = await coordinator.stopAutomaticCoordination();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Virtual Key Management Endpoints
+router.get('/vehicles/:id/virtual-keys', async (req, res) => {
+  try {
+    const virtualKeyAPI = new VirtualKeyAPI();
+    virtualKeyAPI.setTokens(req.tokens);
+    
+    const keys = await virtualKeyAPI.getVirtualKeys(req.params.id);
+    res.json({ vehicle_id: req.params.id, keys });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/vehicles/:id/virtual-keys', async (req, res) => {
+  try {
+    const virtualKeyAPI = new VirtualKeyAPI();
+    virtualKeyAPI.setTokens(req.tokens);
+    
+    const { role = 'driver', formFactor = 'ios' } = req.body;
+    const result = await virtualKeyAPI.createVirtualKey(req.params.id, role, formFactor);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/vehicles/:id/virtual-keys/status', async (req, res) => {
+  try {
+    const virtualKeyAPI = new VirtualKeyAPI();
+    virtualKeyAPI.setTokens(req.tokens);
+    
+    const status = await virtualKeyAPI.hasVirtualKey(req.params.id);
+    res.json({ vehicle_id: req.params.id, ...status });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/vehicles/:id/virtual-keys/ensure', async (req, res) => {
+  try {
+    const virtualKeyAPI = new VirtualKeyAPI();
+    virtualKeyAPI.setTokens(req.tokens);
+    
+    const { role = 'driver' } = req.body;
+    const result = await virtualKeyAPI.ensureVirtualKey(req.params.id, role);
+    res.json({ vehicle_id: req.params.id, ...result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/vehicles/:vehicleId/virtual-keys/:keyId', async (req, res) => {
+  try {
+    const virtualKeyAPI = new VirtualKeyAPI();
+    virtualKeyAPI.setTokens(req.tokens);
+    
+    const result = await virtualKeyAPI.removeVirtualKey(req.params.vehicleId, req.params.keyId);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
