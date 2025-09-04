@@ -241,6 +241,28 @@ router.get('/vehicles/:id', async (req, res) => {
   }
 });
 
+router.get('/vehicles/:id/vin', async (req, res) => {
+  try {
+    const vehicleAPI = new TeslaFleetAPI();
+    vehicleAPI.setTokens(req.tokens);
+    
+    const vehicles = await vehicleAPI.getVehicles();
+    const vehicle = vehicles.response?.find(v => v.id.toString() === req.params.id);
+    
+    if (!vehicle) {
+      return res.status(404).json({ error: 'Vehicle not found' });
+    }
+    
+    res.json({
+      vehicle_id: req.params.id,
+      vin: vehicle.vin,
+      display_name: vehicle.display_name
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/vehicles/:id/wake', async (req, res) => {
   try {
     const vehicleAPI = new TeslaFleetAPI();
