@@ -21,7 +21,46 @@ router.get('/login', (req, res) => {
 
     res.json({
       authUrl,
-      instructions: 'Visit the authUrl to authorize the application, then return to /auth/callback with the authorization code'
+      instructions: 'Visit the authUrl to authorize the application, then return to /auth/callback with the authorization code',
+      scopes_requested: ['openid', 'offline_access', 'vehicle_device_data', 'vehicle_cmds', 'energy_cmds', 'user_data', 'vehicle_charging_cmds', 'energy_device_data', 'vehicle_location'],
+      note: 'Make sure to grant ALL permissions shown on Tesla\'s OAuth page'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/login-full-scopes', (req, res) => {
+  try {
+    // Force request all available scopes
+    const allScopes = [
+      'openid', 
+      'offline_access', 
+      'vehicle_device_data', 
+      'vehicle_cmds', 
+      'energy_cmds', 
+      'user_data', 
+      'vehicle_charging_cmds', 
+      'energy_device_data', 
+      'vehicle_location'
+    ];
+    
+    const { authUrl, state, codeVerifier } = teslaAuth.generateAuthUrl(allScopes);
+    
+    authSessions.set(state, {
+      codeVerifier,
+      createdAt: Date.now()
+    });
+
+    setTimeout(() => {
+      authSessions.delete(state);
+    }, 10 * 60 * 1000);
+
+    res.json({
+      authUrl,
+      scopes_requested: allScopes,
+      instructions: 'This endpoint requests ALL available scopes. Visit the authUrl and grant ALL permissions.',
+      warning: 'Your current token is missing user_data scope - you MUST re-authenticate'
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

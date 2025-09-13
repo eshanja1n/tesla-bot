@@ -40,7 +40,7 @@ export class TeslaAuth {
     const params = new URLSearchParams({
       client_id: this.clientId,
       locale: 'en-US',
-      prompt: 'login',
+      prompt: 'consent', // Force consent screen to show
       redirect_uri: this.redirectUri,
       response_type: 'code',
       scope: scopes.join(' '),

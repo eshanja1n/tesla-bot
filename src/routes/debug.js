@@ -3,6 +3,52 @@ import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
+// Helper function to safely parse scopes from different formats
+function parseScopes(scopeField, scpField) {
+  // Handle 'scope' field (usually string)
+  if (scopeField) {
+    if (typeof scopeField === 'string') {
+      return scopeField.split(' ');
+    } else if (Array.isArray(scopeField)) {
+      return scopeField;
+    }
+  }
+  
+  // Handle 'scp' field (could be string or array)
+  if (scpField) {
+    if (typeof scpField === 'string') {
+      return scpField.split(' ');
+    } else if (Array.isArray(scpField)) {
+      return scpField;
+    }
+  }
+  
+  return [];
+}
+
+// Helper function to check if scopes contain a specific scope
+function hasScope(scopeField, scpField, targetScope) {
+  // Check in 'scope' field
+  if (scopeField) {
+    if (typeof scopeField === 'string' && scopeField.includes(targetScope)) {
+      return true;
+    } else if (Array.isArray(scopeField) && scopeField.includes(targetScope)) {
+      return true;
+    }
+  }
+  
+  // Check in 'scp' field
+  if (scpField) {
+    if (typeof scpField === 'string' && scpField.includes(targetScope)) {
+      return true;
+    } else if (Array.isArray(scpField) && scpField.includes(targetScope)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 // Decode and analyze JWT token to check scopes
 router.get('/token-scopes', (req, res) => {
   const authHeader = req.headers.authorization;
@@ -37,12 +83,16 @@ router.get('/token-scopes', (req, res) => {
         raw_scope: payload.scope,
         scp_claim: payload.scp, // Tesla might use 'scp' instead of 'scope'
         all_claims: Object.keys(payload),
-        parsed_scopes: payload.scope ? payload.scope.split(' ') : (payload.scp ? payload.scp.split(' ') : []),
-        has_vehicle_data: (payload.scope?.includes('vehicle_device_data') || payload.scp?.includes('vehicle_device_data')),
-        has_vehicle_cmds: (payload.scope?.includes('vehicle_cmds') || payload.scp?.includes('vehicle_cmds')),
-        has_energy_cmds: (payload.scope?.includes('energy_cmds') || payload.scp?.includes('energy_cmds')),
-        has_offline_access: (payload.scope?.includes('offline_access') || payload.scp?.includes('offline_access')),
-        has_openid: (payload.scope?.includes('openid') || payload.scp?.includes('openid'))
+        parsed_scopes: parseScopes(payload.scope, payload.scp),
+        has_vehicle_data: hasScope(payload.scope, payload.scp, 'vehicle_device_data'),
+        has_vehicle_cmds: hasScope(payload.scope, payload.scp, 'vehicle_cmds'),
+        has_energy_cmds: hasScope(payload.scope, payload.scp, 'energy_cmds'),
+        has_offline_access: hasScope(payload.scope, payload.scp, 'offline_access'),
+        has_openid: hasScope(payload.scope, payload.scp, 'openid'),
+        has_user_data: hasScope(payload.scope, payload.scp, 'user_data'),
+        has_vehicle_charging_cmds: hasScope(payload.scope, payload.scp, 'vehicle_charging_cmds'),
+        has_energy_device_data: hasScope(payload.scope, payload.scp, 'energy_device_data'),
+        has_vehicle_location: hasScope(payload.scope, payload.scp, 'vehicle_location')
       },
       recommendations: []
     };
@@ -62,6 +112,14 @@ router.get('/token-scopes', (req, res) => {
     
     if (!analysis.scopes.has_offline_access) {
       analysis.recommendations.push('Missing offline_access scope - cannot refresh tokens');
+    }
+    
+    if (!analysis.scopes.has_user_data) {
+      analysis.recommendations.push('⚠️  Missing user_data scope - cannot access user endpoints (THIS IS YOUR CURRENT ISSUE)');
+    }
+    
+    if (!analysis.scopes.has_vehicle_charging_cmds) {
+      analysis.recommendations.push('Missing vehicle_charging_cmds scope - limited charging control');
     }
     
     if (analysis.recommendations.length === 0) {
